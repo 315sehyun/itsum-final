@@ -4853,7 +4853,9 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
       items: items, itemSeq: items.length, slots: bSlots, direct: true, milkrun: false, autoAccept: true, sampled: true });
   };
   A.rcSample = function () {
-    var rc = UI.st.rc;
+    var rc = UI.st.rc, dm = S.demoSailing();
+    // 같은 배편에 이미 올린 A-T1 모집이 있으면 채우지 않고 버튼을 누른 뒤에만 안내
+    if (dm && S.recruitOf('A-T1', dm.sailing.id)) { if (rc) { rc.askSample = false; rc.dupNote = true; } UI.render(); return; }
     if (rc && rc.items.length && !rc.askSample) { rc.askSample = true; UI.render(); return; }
     var x = UI.sampleRc();
     if (!x) { UI.toast('지금은 샘플 조건을 넣을 배편이 없어요', true); return; }
@@ -4864,7 +4866,7 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
   function rcSampleBox(rc) {
     if (me() !== 'A') return '';
     var dm = S.demoSailing(), dup = dm && S.recruitOf('A-T1', dm.sailing.id);
-    if (dup) return '<div class="btns" id="rcSampleBox"><span class="small">이 배편에 이미 모집 중이에요</span><button type="button" class="btn sm" data-act="rcMine">내 모집 보기</button></div>';
+    if (dup && rc.dupNote) return '<div class="btns" id="rcSampleBox"><span class="small">이 배편에 이미 모집 중이에요</span><button type="button" class="btn sm" data-act="rcMine">내 모집 보기</button></div>';
     return '<div id="rcSampleBox" style="text-align:right">' + (rc.askSample
       ? '<div class="note"><b>샘플 화물로 바꿀까요?</b> 담은 화물을 샘플 화물로 바꿔요. <span class="btns mt"><button type="button" class="btn sm primary" data-act="rcSample">예</button><button type="button" class="btn sm" data-act="rcSampleNo">아니오</button></span></div>'
       : '<button type="button" class="btn sm" data-act="rcSample">샘플 조건 넣기</button>') + '</div>';
