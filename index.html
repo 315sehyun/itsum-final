@@ -261,7 +261,7 @@ table.t td .src { white-space: normal; }
 (function (root) {
   var IT = root.IT = root.IT || {};
 
-  IT.CONFIG_VERSION = 'cfg-v3.1.0';
+  IT.CONFIG_VERSION = 'cfg-v3.1.1'; // D67: 예전 저장 상태(A-T1 모집이 미리 들어간 프리셋)를 버리고 새로 시작
   IT.CODE_VERSION = 'itsum-v3.1.0';
 
   IT.config = {
@@ -4865,11 +4865,9 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
     if (me() !== 'A') return '';
     var dm = S.demoSailing(), dup = dm && S.recruitOf('A-T1', dm.sailing.id);
     if (dup) return '<div class="btns" id="rcSampleBox"><span class="small">이 배편에 이미 모집 중이에요</span><button type="button" class="btn sm" data-act="rcMine">내 모집 보기</button></div>';
-    var bSlots = S.itemsSummary(IT.fixtureDraftB(S.state.now).items).slots;
     return '<div id="rcSampleBox" style="text-align:right">' + (rc.askSample
       ? '<div class="note"><b>샘플 화물로 바꿀까요?</b> 담은 화물을 샘플 화물로 바꿔요. <span class="btns mt"><button type="button" class="btn sm primary" data-act="rcSample">예</button><button type="button" class="btn sm" data-act="rcSampleNo">아니오</button></span></div>'
-      : '<button type="button" class="btn sm" data-act="rcSample">샘플 조건 넣기</button>') +
-      (rc.sampled ? '<div class="tiny muted mt" id="rcSampleHint">B사 샘플 화물(' + bSlots + '칸)이 실릴 수 있는 조건으로 채웠어요.</div>' : '') + '</div>';
+      : '<button type="button" class="btn sm" data-act="rcSample">샘플 조건 넣기</button>') + '</div>';
   }
   A.rcPost = function () {
     var r = S.postRecruit(UI.st.rc);
@@ -5526,7 +5524,7 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
       '<p class="small mt" style="color:' + (allOk ? 'var(--green)' : 'var(--red)') + '">' + (allOk ? (incomparable ? '✔ 비교 가능 참여사 손해 없음 · 비교 불가 ' + incomparable + '곳' : '✔ 모든 참여사가 혼자 보낼 때보다 손해 없음') + ' · 분담 합계 = 실제 운송비' : '✘ ' + esc(R.verdict) + (L.balanced ? '' : ' · 분담 합계와 운송비 불일치')) + '</p>' +
       '<div class="tbl-wrap"><table class="t"><thead><tr><th>참여사</th>' + cols.map(function (c) { return '<th class="r">' + c[1] + '</th>'; }).join('') + '<th class="r">합계</th><th class="r">혼자 보낼 때</th><th class="r">절감률</th></tr></thead><tbody>' +
       (rows.length ? rows.map(function (r) {
-        return '<tr><td>' + UI.cname(r.id) + '</td>' + cols.map(function (c) { return '<td class="r num">' + w(r[c[0]]) + '</td>'; }).join('') + '<td class="r num"><b>' + U.won(r.total) + '</b></td><td class="r num">' + (r.check.indep ? U.won(r.check.indep) : '') + '</td><td class="r num">' + (r.check.status === 'ok' && r.check.saving != null ? U.pct(r.check.saving) : '') + '</td></tr>';
+        return '<tr><td>' + UI.cname(r.id) + '</td>' + cols.map(function (c) { return '<td class="r num">' + w(r[c[0]]) + '</td>'; }).join('') + '<td class="r num"><b>' + U.won(r.total) + '</b></td><td class="r num">' + (r.check.indep ? U.won(r.check.indep) : '') + '</td><td class="r num">' + (r.check.status === 'ok' && r.check.saving != null ? (r.check.joint === r.check.indep ? '<span class="small muted">' + (S.state.recruits.some(function (m) { return m.company === r.id && m.state === 'open'; }) ? '모집 중 · ' : '') + '합적 전</span>' : U.pct(r.check.saving)) : '') + '</td></tr>';
       }).join('') : '<tr><td colspan="' + (cols.length + 4) + '" class="empty-state">분담할 운송이 없습니다</td></tr>') +
       '</tbody><tfoot><tr><td>합계</td><td colspan="' + cols.length + '"></td><td class="r num">' + U.won(tot) + '</td><td colspan="2"></td></tr></tfoot></table></div>' +
       '<details class="mt"><summary>구간별 비용 보기 (' + L.legs.length + '건)</summary><div class="tbl-wrap"><table class="t small"><thead><tr><th>운행</th><th></th><th class="r">도선료</th><th class="r">운행비 배분</th><th class="r">구간 비용</th><th>배분</th></tr></thead><tbody>' + legs + '</tbody></table></div></details></div>' +
