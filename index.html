@@ -261,7 +261,7 @@ table.t td .src { white-space: normal; }
 (function (root) {
   var IT = root.IT = root.IT || {};
 
-  IT.CONFIG_VERSION = 'cfg-v3.1.1'; // D67: 예전 저장 상태(A-T1 모집이 미리 들어간 프리셋)를 버리고 새로 시작
+  IT.CONFIG_VERSION = 'cfg-v3.1.2'; // D67·D68: 예전 저장 상태(A-T1 모집·A 7칸이 들어간 상태)를 버리고 새로 시작
   IT.CODE_VERSION = 'itsum-v3.1.0';
 
   IT.config = {
@@ -5883,10 +5883,10 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
   UI.ensureSampleRecruit = ensureSampleRecruit;
   var DEMO = UI.DEMO = {
     weekday: [
-      // 고객 A 화면에 [샘플 조건 넣기] 값을 채워 연다 → 발표자가 [모집 올리기]를 직접 누른다
-      { label: '고객 A 호스트로 참여: 샘플 조건으로 A-T1 빈 공간 모집 올리기 (여유 5칸 · 혼자 524,380원 → 다 차면 290,888원)', run: function () {
-        S.setView('customer', 'A'); var dm = S.demoSailing();
-        UI.st.rc = dm && S.recruitOf('A-T1', dm.sailing.id) ? null : UI.sampleRc(); go('#c-host');
+      // D68 (평일시연 A사 화물 미리입력 제거 프롬프트 4장): 빈 양식 → 샘플 화물 7칸 → [모집 올리기]를 자동 수행하고 A 호스트 화면(내 모집)을 연다
+      { label: '고객 A 호스트로 참여: 샘플 화물 7칸으로 A-T1 빈 공간 모집 올림 (여유 5칸 · 혼자 524,380원 → 다 차면 290,888원)', run: function () {
+        if (!ensureSampleRecruit()) UI.fail();
+        S.setView('customer', 'A'); UI.st.rc = null; go('#c-host');
       } },
       // 다음 단계는 고객 화면(B 계정) 등록 화면을 채워 연다 → 발표자가 고객 화면에서 [다음]·[추천 받기]·[매칭 신청]을 직접 누르고 '운영자 화면'으로 돌아온다
       { label: '고객 B 화물 등록 화면 열기 (5칸 · 제주행 · 직접 반입) → 고객 화면에서 직접 신청', run: function () { if (!ensureSampleRecruit()) UI.fail(); S.setView('customer', 'B'); UI.st = Object.assign(UI.st, { draft: IT.fixtureDraftB(S.state.now), step: 1, quote: null, submitted: null, matchRes: null, itemEdit: null, itemForm: null, errors: null, askAdd: false }); go('#c-register'); } },
