@@ -1,7 +1,14 @@
 <!doctype html>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<script>/* 배포용 저장 키: charset 없이 배포됐을 때 깨진 글자로 저장된 상태(itsum-v3-state)를 버림 */window.ITSUM_STORE_KEY='itsum-web-state';try{localStorage.removeItem('itsum-v3-state')}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- 배포용 머리말 (itsum-deploy/README.md 참고): 클로드 아티팩트가 게시할 때 붙이는 기본 스타일과 같게 맞춤 -->
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<script>
+/* 저장 키: charset 없이 배포됐을 때 깨진 글자로 저장된 상태(itsum-v3-state)를 버림 */
+window.ITSUM_STORE_KEY='itsum-web-state';try{localStorage.removeItem('itsum-v3-state')}catch(e){}
+/* 아티팩트의 downloads 기능과 같게 정산서 CSV를 파일로 저장 (일반 웹에서는 바로 내려받기) */
+window.claude=window.claude||{use:function(n){return Promise.resolve(n!=='downloads'?null:{save:function(o){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([o.data],{type:'text/csv;charset=utf-8'}));a.download=o.filename;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},0);return Promise.resolve()}})}};
+</script>
 <title>잇섬</title>
 <meta name="description" content="잇섬 — 제주–육지 공동적재·복화 매칭 플랫폼 (해커톤 시연, 가상 데이터)">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1774,16 +1781,19 @@ table.t td .src { white-space: normal; }
   }
   IT.makeOrder = order;
 
-  // B 등록 초안 (운영자 시연 진행 1단계·테스트 전용 — 고객 화면에는 버튼 없음)
+  // B 샘플 (고객 B [샘플 화물 넣기]·[샘플 조건 넣기], 운영자 시연, 테스트)
   // 40×30×28cm × 150상자 = 5.04m³ → ⌈5.04 ÷ 1.02⌉ = 5칸
+  // 출발 가능 시각·도착 기한은 시연 배편(S.demoSailing, A 샘플 모집과 같은 배편)에서 정함 (D67)
   IT.fixtureDraftB = function (now) {
-    var st = IT.store && IT.store.state, day = (st && st.anchorDay) || U.dateKey(now);
+    var S = IT.store, st = S && S.state, day = (st && st.anchorDay) || U.dateKey(now);
+    var dm = st && S.demoSailing ? S.demoSailing() : null;
+    var at = dm ? U.dateKey(dm.start) + 'T' + U.hm(dm.start) : day + 'T08:00', sday = dm ? U.dateKey(dm.sailing.dep) : day;
     return { companyId: 'B',
       items: [{ id: 'I1', name: '생활용품 박스', packaging: '상자', count: 150, sizeMode: 'dims', w: 40, d: 30, h: 28, totalM3: '', kg: 1500, temp: 'ambient', stackable: true, fragile: false }],
-      dir: 'toJeju', mode: 'direct', readyDT: day + 'T08:00', inboundDT: day + 'T08:00',
+      dir: 'toJeju', mode: 'direct', readyDT: at, inboundDT: at,
       originZone: '', originCenterId: 'CB', pickupFromDT: '', pickupToDT: '',
-      // 도착 기한 = 다음 날 23:00 (2026-11-15): 다음 날 01:00편 후보도 비교되게 (균형·도착 우선은 오늘 14:00 A-T1)
-      destZone: '제주시', destCenterId: 'CD', deadlineDT: U.addDays(day, 1) + 'T23:00', priority: 'balanced' };
+      // 도착 기한 = 시연 배편 다음 날 23:00 (2026-11-15): 다음 날 01:00편 후보도 비교되게 (균형·도착 우선은 시연 배편 A-T1)
+      destZone: '제주시', destCenterId: 'CD', deadlineDT: U.addDays(sday, 1) + 'T23:00', priority: 'balanced' };
   };
 
   // 배편 미정 호스트 트럭의 자사 예정 칸 — 홈 '지금 실을 수 있는 호스트 트럭' 표시용 (2026-11-16 사용자 요청, 엔진·정산 미반영)
@@ -1818,7 +1828,8 @@ table.t td .src { white-space: normal; }
     var ss = IT.calc.buildSailings(d0, 3);
     function sail(dir, day, hm) { return ss.filter(function (s) { return s.dir === dir && U.dateKey(s.dep) === day && U.hm(s.dep) === hm; })[0]; }
     var d1 = U.addDays(d0, 1), list = [];
-    [['A', 'A-T1', 'R-A01', 'toJeju', d0, '14:00', 20], ['E', 'E-T2', 'R-E02', 'toJeju', d0, '14:00', 20], ['F', 'F-T1', 'R-F01', 'toJeju', d0, '14:00', 20],
+    // A-T1 모집 글은 넣지 않는다 (D67): 시연에서 A가 [샘플 조건 넣기]로 직접 올림
+    [['E', 'E-T2', 'R-E02', 'toJeju', d0, '14:00', 20], ['F', 'F-T1', 'R-F01', 'toJeju', d0, '14:00', 20],
       ['G', 'G-T1', 'R-G01', 'toJeju', d1, '01:00', 30], ['H', 'H-T1', 'R-H01', 'toMainland', d0, '13:40', 20], ['F', 'F-T2', 'R-F04', 'toJeju', d1, '01:00', null]].forEach(function (x) {
       var s = sail(x[3], x[4], x[5]), v = st.vehicles.filter(function (y) { return y.id === x[1]; })[0], o = st.orders.filter(function (y) { return y.id === x[2]; })[0];
       if (!s || !v || !o) return;
@@ -1879,7 +1890,8 @@ table.t td .src { white-space: normal; }
       orders.push(order({ id: 'R-A01', c: 'A', name: '생활용품 혼적', slots: 7, kg: 2100, origin: 'CA', region: '목포', ready: K(d0, '09:00'), deadline: K(d0, '23:00') }));
     } else if (P.id === 'weekday' || P.id === 'cancel') {
       var dl = P.id === 'cancel' ? K(d1, '12:00') : K(d0, '23:00');
-      orders.push(order({ id: 'R-A01', c: 'A', name: '생활용품 혼적', slots: 7, kg: 2100, origin: 'CA', region: '목포', ready: K(d0, '09:00'), deadline: dl }));
+      // 평일 보통에는 A 7칸이 없다 (D67): A가 호스트로 참여 모집을 올릴 때 생김. 결항 시나리오는 그대로
+      if (P.id === 'cancel') orders.push(order({ id: 'R-A01', c: 'A', name: '생활용품 혼적', slots: 7, kg: 2100, origin: 'CA', region: '목포', ready: K(d0, '09:00'), deadline: dl }));
       orders.push(order({ id: 'R-C01', c: 'C', name: '농자재 상자', slots: 3, kg: 900, origin: 'CC', region: '나주', ready: K(d0, '08:00'), deadline: K(d2, '18:00') }));
       orders.push(order({ id: 'R-E01', c: 'E', name: '가공식품 상자', slots: 7, kg: 2100, origin: 'CE', region: '무안', ready: K(d1, '06:00'), deadline: K(d2, '20:00') }));
       orders.push(order({ id: 'R-E02', c: 'E', name: '냉장 식자재', slots: 4, kg: 1300, temp: 'chilled', origin: 'CE', region: '무안', ready: K(d0, '09:00'), deadline: K(d1, '12:00') }));
@@ -3551,6 +3563,19 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
     var gap = Math.max(0, Math.ceil(((S.state.anchorAt || 0) - S.state.now) / (24 * U.HOUR)));
     return IT.calc.buildSailings(U.dateKey(S.state.now), 3 + gap, IT.config, S.state.cancelled).filter(function (s) { return s.dir === dir && !s.cancelled && s.dep > S.state.now; });
   };
+  // 시연 배편 (D67): A [샘플 조건 넣기]와 B 샘플 조건이 모두 이 함수로 배편·시각을 정한다.
+  // 기준 시각 이후 A 목포 센터(CA) 반입 마감이 남은 가장 가까운 목포→제주 14:00편 (없으면 가장 가까운 배편).
+  // B 출발 가능 = 반입 마감 2시간 전(30분 내림) · 기준 시각보다 이르면 기준 시각 다음 30분 · 그래도 마감을 넘으면 다음 배편
+  S.demoSailing = function () {
+    var st = S.state, ca = IT.idx(st.centers).CA, H = 30 * 60000;
+    if (!ca) return null;
+    var list = S.recruitSailings('toJeju').map(function (s) {
+      var cut = C.centerInboundCutoff(s.dep, ca), start = Math.floor((cut - 2 * U.HOUR) / H) * H;
+      if (start < st.now) start = Math.floor(st.now / H) * H + H;
+      return { sailing: s, cutoff: cut, start: start };
+    }).filter(function (x) { return x.cutoff > st.now && x.start < x.cutoff; });
+    return list.filter(function (x) { return U.hm(x.sailing.dep) === '14:00'; })[0] || list[0] || null;
+  };
   // 혼자 / 다 찰 때 / 절반 찰 때: 내 분담 = 구간 비용의 칸 비율 몫 − 받을 인계비
   function recruitMoney(v, s, mine, fill) {
     var leg = C.legCost(v, s.dir, true, s.dep).total, w = { me: mine };
@@ -4153,6 +4178,8 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
     base: [['생활용품 박스', 40, 50, 40, 40, 320], ['식품 박스', 30, 40, 30, 30, 240], ['의류 박스', 20, 60, 40, 40, 160]],
     jeju: [['감귤 상자', 40, 50, 40, 40, 320], ['제주 특산품 박스', 30, 40, 30, 30, 240], ['반품 의류 박스', 20, 60, 40, 40, 160]]
   };
+  function sampleItem(x, id, temp) { return { id: id, name: x[0], packaging: '상자', count: x[1], sizeMode: 'dims', w: x[2], d: x[3], h: x[4], totalM3: '', kg: x[5], temp: temp, stackable: true, fragile: false }; }
+  UI.SAMPLE_ITEMS = SAMPLE;
   A.sampleItems = function () {
     var d = itemsD(), temp = lockedTemp(d) || 'ambient';
     // B 로그인 화물 등록 = 발표 7장 예시와 같은 생활용품 150상자 (40×30×28cm, 5.04m³ → 5칸)
@@ -4162,9 +4189,7 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
       UI.st.errors = null; UI.toast('샘플 화물을 담았어요 (생활용품 150상자 · 5칸)'); UI.render(); return;
     }
     var hasJejuOnly = S.state.centers.some(function (c) { return c.companyId === me() && c.side === 'jeju'; }) && !S.state.centers.some(function (c) { return c.companyId === me() && c.side === 'mainland'; });
-    (hasJejuOnly ? SAMPLE.jeju : SAMPLE.base).forEach(function (x) {
-      d.items.push({ id: 'I' + (++d.itemSeq), name: x[0], packaging: '상자', count: x[1], sizeMode: 'dims', w: x[2], d: x[3], h: x[4], totalM3: '', kg: x[5], temp: temp, stackable: true, fragile: false });
-    });
+    (hasJejuOnly ? SAMPLE.jeju : SAMPLE.base).forEach(function (x) { d.items.push(sampleItem(x, 'I' + (++d.itemSeq), temp)); });
     if (UI.st.itemEdit == null) resetForm();
     UI.st.errors = null; UI.toast('샘플 화물 3건을 담았어요 (' + (temp === 'chilled' ? '냉장' : '상온') + ')'); UI.render();
   };
@@ -4275,8 +4300,8 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
     autoOrigin(d); // 방향에 맞는 내 센터가 하나뿐이면 자동 선택
     UI.render();
   };
-  // B 로그인 운송 조건 샘플 = 발표 7장 예시: 제주행 · 직접 반입 · B 광주 거점 · 기준일 08:00 출발 가능 · D 제주시 센터 · 다음 날 23:00 · 균형
-  // → A-T1 기준일 14:00편(A 목포 센터 09:36 반입 마감) · 233,492원, A 모집 글의 자동 수락으로 즉시 매칭
+  // B 로그인 운송 조건 샘플 = 발표 7장 예시: 제주행 · 직접 반입 · B 광주 거점 · 시연 배편 반입 마감 2시간 전 출발 가능 · D 제주시 센터 · 다음 날 23:00 · 균형
+  // → A가 [샘플 조건 넣기]로 올린 A-T1 시연 배편(S.demoSailing) · 233,492원, A 모집 글의 자동 수락으로 즉시 매칭
   A.sampleCond = function () {
     var d = UI.st.draft, fx = IT.fixtureDraftB(S.state.now);
     ['dir', 'mode', 'originZone', 'originCenterId', 'destZone', 'destCenterId', 'priority'].forEach(function (k) { d[k] = fx[k]; });
@@ -4810,7 +4835,7 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
     var rc = UI.st.rc, k = el.dataset.k, v = el.dataset.v != null ? el.dataset.v : el.type === 'checkbox' ? el.checked : el.value;
     if (k === 'truckId' && v !== rc.truckId) {
       var tv = S.state.vehicles.filter(function (x) { return x.id === v; })[0];
-      Object.assign(rc, { truckId: v, sailingId: '', centerId: tv ? tv.homeCenterId : '', items: [], slots: '', fixedTemp: tv ? tv.temp : null, dir: tv && tv.base === 'jeju' ? 'toMainland' : 'toJeju' });
+      Object.assign(rc, { truckId: v, sailingId: '', centerId: tv ? tv.homeCenterId : '', items: [], slots: '', fixedTemp: tv ? tv.temp : null, dir: tv && tv.base === 'jeju' ? 'toMainland' : 'toJeju', sampled: false, askSample: false });
       resetForm();
     } else if (k === 'dir' && v !== rc.dir) { rc.dir = v; rc.sailingId = ''; }
     else if (k === 'radius') rc.radius = Number(v);
@@ -4818,6 +4843,34 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
     else rc[k] = v === 'true' ? true : v === 'false' ? false : v;
     UI.render();
   };
+  // A 로그인 [샘플 조건 넣기] (D67): B 샘플 화물이 실릴 A-T1 모집 — 시연 배편 S.demoSailing() · 샘플 화물 3건(7칸) · 여유 = B 샘플 칸 수
+  UI.sampleRc = function () {
+    var dm = S.demoSailing(), v = S.state.vehicles.filter(function (x) { return x.id === 'A-T1'; })[0];
+    if (!dm || !v) return null;
+    var items = SAMPLE.base.map(function (x, i) { return sampleItem(x, 'I' + (i + 1), v.temp); });
+    var bSlots = S.itemsSummary(IT.fixtureDraftB(S.state.now).items).slots;
+    return Object.assign(blankRc(), { company: 'A', truckId: v.id, dir: 'toJeju', sailingId: dm.sailing.id, centerId: v.homeCenterId, fixedTemp: v.temp,
+      items: items, itemSeq: items.length, slots: bSlots, direct: true, milkrun: false, autoAccept: true, sampled: true });
+  };
+  A.rcSample = function () {
+    var rc = UI.st.rc;
+    if (rc && rc.items.length && !rc.askSample) { rc.askSample = true; UI.render(); return; }
+    var x = UI.sampleRc();
+    if (!x) { UI.toast('지금은 샘플 조건을 넣을 배편이 없어요', true); return; }
+    UI.st.rc = x; resetForm(); UI.render();
+  };
+  A.rcSampleNo = function () { UI.st.rc.askSample = false; UI.render(); };
+  A.rcMine = function () { var el = document.getElementById('myRecruits'); if (el) el.scrollIntoView({ behavior: 'smooth' }); };
+  function rcSampleBox(rc) {
+    if (me() !== 'A') return '';
+    var dm = S.demoSailing(), dup = dm && S.recruitOf('A-T1', dm.sailing.id);
+    if (dup) return '<div class="btns" id="rcSampleBox"><span class="small">이 배편에 이미 모집 중이에요</span><button type="button" class="btn sm" data-act="rcMine">내 모집 보기</button></div>';
+    var bSlots = S.itemsSummary(IT.fixtureDraftB(S.state.now).items).slots;
+    return '<div id="rcSampleBox" style="text-align:right">' + (rc.askSample
+      ? '<div class="note"><b>샘플 화물로 바꿀까요?</b> 담은 화물을 샘플 화물로 바꿔요. <span class="btns mt"><button type="button" class="btn sm primary" data-act="rcSample">예</button><button type="button" class="btn sm" data-act="rcSampleNo">아니오</button></span></div>'
+      : '<button type="button" class="btn sm" data-act="rcSample">샘플 조건 넣기</button>') +
+      (rc.sampled ? '<div class="tiny muted mt" id="rcSampleHint">B사 샘플 화물(' + bSlots + '칸)이 실릴 수 있는 조건으로 채웠어요.</div>' : '') + '</div>';
+  }
   A.rcPost = function () {
     var r = S.postRecruit(UI.st.rc);
     if (!r) { UI.fail(); UI.render(); return; }
@@ -4863,7 +4916,7 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
     function dis(ok) { return ok ? '' : ' disabled'; }
     var cs = okT ? S.state.centers.filter(function (c) { return c.companyId === me() && c.side === (v.base === 'jeju' ? 'jeju' : 'mainland'); }) : [];
     var sails = S.recruitSailings(rc.dir);
-    var form = '<div class="card" id="rcForm"><h2>모집 등록</h2><p class="small muted">위에서부터 차례로 채우면 다음 칸이 열려요.</p>' +
+    var form = '<div class="card" id="rcForm"><div class="btns" style="justify-content:space-between;align-items:flex-start"><div><h2 style="margin:0">모집 등록</h2><p class="small muted">위에서부터 차례로 채우면 다음 칸이 열려요.</p></div>' + rcSampleBox(rc) + '</div>' +
       '<div class="cond"><h3>1. 트럭</h3><div class="field"><select data-act="rcSet" data-k="truckId" aria-label="트럭"><option value="">선택하세요</option>' + vs.map(function (x) { return '<option value="' + x.id + '"' + (x.id === rc.truckId ? ' selected' : '') + '>' + esc(x.id) + ' · ' + IT.config.vehicleClasses[x.cls].slots + '칸 · ' + (x.temp === 'chilled' ? '냉장' : '상온') + '</option>'; }).join('') + '</select></div></div>' +
       '<div class="cond"><h3>2. 배편</h3><div class="seg">' + [['toJeju', '→ 제주행'], ['toMainland', '← 육지행']].map(function (x) { return '<button type="button" data-act="rcSet" data-k="dir" data-v="' + x[0] + '" class="' + (rc.dir === x[0] ? 'on' : '') + '"' + dis(okT) + '>' + x[1] + '</button>'; }).join('') + '</div>' +
         '<div class="field mt"><select data-act="rcSet" data-k="sailingId" aria-label="배편"' + dis(okT) + '><option value="">선택하세요</option>' + sails.map(function (s) { var past = s.cutoff <= S.state.now; return '<option value="' + s.id + '"' + (s.id === rc.sailingId ? ' selected' : '') + (past ? ' disabled' : '') + '>' + esc(sailOpt(s)) + (past ? ' (마감 지남)' : '') + '</option>'; }).join('') + '</select><span class="hint">오늘부터 3일 안의 목포 배편 · 선적 마감이 지난 배편은 고를 수 없어요</span></div></div>' +
@@ -5818,13 +5871,28 @@ window.ITSUM_EXPERIMENT = {"wallSeconds":320,"runner":"tools/run-experiment.ps1 
     for (var i = 0; i < steps.length; i++) { if (!S.advance(p.id, steps[i])) return false; S.syncProposals(); }
     return true;
   }
+  // A 샘플 모집이 없으면 올린다 (D67: 평일 보통 프리셋에는 A-T1 모집 글이 없음)
+  function ensureSampleRecruit() {
+    var dm = S.demoSailing();
+    if (!dm || S.recruitOf('A-T1', dm.sailing.id)) return true;
+    var keep = S.state.viewCompany; S.setView('customer', 'A');
+    var r = S.postRecruit(UI.sampleRc());
+    S.setView('customer', keep);
+    return !!r;
+  }
+  UI.ensureSampleRecruit = ensureSampleRecruit;
   var DEMO = UI.DEMO = {
     weekday: [
-      { label: '고객 A 호스트로 참여: A-T1 빈 공간 모집 글 확인 (여유 5칸 · 혼자 524,380원 → 다 차면 290,888원)', run: function () { S.setView('customer', 'A'); UI.st.rc = null; go('#c-host'); } },
+      // 고객 A 화면에 [샘플 조건 넣기] 값을 채워 연다 → 발표자가 [모집 올리기]를 직접 누른다
+      { label: '고객 A 호스트로 참여: 샘플 조건으로 A-T1 빈 공간 모집 올리기 (여유 5칸 · 혼자 524,380원 → 다 차면 290,888원)', run: function () {
+        S.setView('customer', 'A'); var dm = S.demoSailing();
+        UI.st.rc = dm && S.recruitOf('A-T1', dm.sailing.id) ? null : UI.sampleRc(); go('#c-host');
+      } },
       // 다음 단계는 고객 화면(B 계정) 등록 화면을 채워 연다 → 발표자가 고객 화면에서 [다음]·[추천 받기]·[매칭 신청]을 직접 누르고 '운영자 화면'으로 돌아온다
-      { label: '고객 B 화물 등록 화면 열기 (5칸 · 제주행 · 직접 반입) → 고객 화면에서 직접 신청', run: function () { S.setView('customer', 'B'); UI.st = Object.assign(UI.st, { draft: IT.fixtureDraftB(S.state.now), step: 1, quote: null, submitted: null, matchRes: null, itemEdit: null, itemForm: null, errors: null, askAdd: false }); go('#c-register'); } },
+      { label: '고객 B 화물 등록 화면 열기 (5칸 · 제주행 · 직접 반입) → 고객 화면에서 직접 신청', run: function () { if (!ensureSampleRecruit()) UI.fail(); S.setView('customer', 'B'); UI.st = Object.assign(UI.st, { draft: IT.fixtureDraftB(S.state.now), step: 1, quote: null, submitted: null, matchRes: null, itemEdit: null, itemForm: null, errors: null, askAdd: false }); go('#c-register'); } },
       { label: '운영자 현황: 제주행 · 신청 즉시 매칭 확인 (미신청이면 자동 신청)', run: function () {
         var mine = S.state.orders.some(function (o) { return o.companyId === 'B' && o.src === '고객 입력' && o.status !== 'cancelled'; });
+        if (!mine && !ensureSampleRecruit()) UI.fail();
         if (!mine) {
           var d = UI.st.draft && UI.st.draft.companyId === 'B' ? UI.st.draft : IT.fixtureDraftB(S.state.now), q = S.quote(d);
           if (!q.ok) { d = IT.fixtureDraftB(S.state.now); q = S.quote(d); }
